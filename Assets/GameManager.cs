@@ -3,7 +3,20 @@ using TMPro;        // TextMeshProを使用するための名前空間
 
 public class GameManager : MonoBehaviour
 {
-    private string[] mapData;
+    // private string[] mapData; // REMOVED: Old map data
+    
+    // 静的なマップデータ（変更不可の設計図）
+    private static readonly string[] baseMapData = {
+        "#####  ###",
+        "#...####.#",
+        "#........#",
+        "#...######",
+        "#####     "
+    };
+
+    // 動的なグリッドデータ（実際にキャラが乗る盤面）
+    private char[][] gridData;
+
     private Vector2Int playerPosition;
 
     // インスペクタでアタッチしたTMPを参照
@@ -14,7 +27,7 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         playerPosition = new Vector2Int(1, 1); // プレイヤーの初期位置を設定
-        SetBaseMap();           // マップの基本データを設定
+        InitGrid();             // グリッドの初期化
         UpdateMapDisplay();     // 最初のマップ表示を更新
 
         messageText.text = "Anata no bouken ga hajimatta!!";    // メッセージを表示
@@ -26,42 +39,55 @@ public class GameManager : MonoBehaviour
         
     }
 
-    // マップの基本データを設定
-    void SetBaseMap()
+    // グリッドの初期化
+    void InitGrid()
     {
-        mapData = new string[]
+        gridData = new char[baseMapData.Length][];
+        for (int y = 0; y < baseMapData.Length; y++)
         {
-            "#####  ###",
-            "#...####.#",
-            "#........#",
-            "#...######",
-            "#####     "
-        };
+            gridData[y] = baseMapData[y].ToCharArray();
+        }
     }
 
     // マップ表示を更新する関数
     void UpdateMapDisplay()
     {
+        ResetGrid();         // 盤面をbaseMapDataでリセット
+        PlaceCharacters();   // キャラクターを重ね書き
+
+        // グリッドをテキストに変換して表示
         string fullMapText = "<line-height=80%><mspace=0.7em>"; // タグを忘れずに
 
-        for (int y = 0; y < mapData.Length; y++)
+        for (int y = 0; y < gridData.Length; y++)
         {
-            for (int x = 0; x < mapData[y].Length; x++)
-            {
-                // 今のループの座標がプレイヤーの位置と同じなら '@' を足す
-                if (x == playerPosition.x && y == playerPosition.y)
-                {
-                    fullMapText += "@";
-                }
-                else
-                {
-                    fullMapText += mapData[y][x];
-                }
-            }
-            fullMapText += "\n"; // 行の終わりに改行！
+            fullMapText += new string(gridData[y]) + "\n";
         }
 
         mapText.text = fullMapText;
+    }
+
+    // 盤面をbaseMapDataでリセット（前のコマのキャラを消す）
+    void ResetGrid()
+    {
+        for (int y = 0; y < baseMapData.Length; y++)
+        {
+            // string.CopyTo(開始位置, 転送先配列, 転送先開始位置, 文字数)
+            // メモリ確保なしで高速にコピーできます
+            baseMapData[y].CopyTo(0, gridData[y], 0, baseMapData[y].Length);
+        }
+    }
+
+    // キャラクターをレイヤー順に配置
+    void PlaceCharacters()
+    {
+        // 1. NPCの配置（将来実装）
+        // foreach (var npc in npcList) gridData[npc.y][npc.x] = npc.symbol;
+
+        // 2. エネミーの配置（将来実装）
+        // foreach (var enemy in enemyList) gridData[enemy.y][enemy.x] = enemy.symbol;
+
+        // 3. プレイヤーの配置（最前面）
+        gridData[playerPosition.y][playerPosition.x] = '@';
     }
 
     // Upボタンが押された
@@ -100,7 +126,8 @@ public class GameManager : MonoBehaviour
         if (direction == "Right") nextPos.x += 1;
 
         // 💡 ここで「壁（#）じゃないか」のチェックを入れると完璧！
-        if (mapData[nextPos.y][nextPos.x] != '#')
+        // baseMapData（動かない地形）で判定するのが安全
+        if (baseMapData[nextPos.y][nextPos.x] != '#')
         {
             playerPosition = nextPos;
             UpdateMapDisplay(); // 画面を更新！
