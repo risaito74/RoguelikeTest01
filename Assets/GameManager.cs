@@ -17,6 +17,9 @@ public class GameManager : MonoBehaviour
     // 動的なグリッドデータ（実際にキャラが乗る盤面）
     private char[][] gridData;
 
+    // NPCリストを追加
+    private System.Collections.Generic.List<NPC> npcList;
+
     private Vector2Int playerPosition;
 
     // インスペクタでアタッチしたTMPを参照
@@ -28,6 +31,7 @@ public class GameManager : MonoBehaviour
     {
         playerPosition = new Vector2Int(1, 1); // プレイヤーの初期位置を設定
         InitGrid();             // グリッドの初期化
+        InitNPCs();             // NPCの初期化
         UpdateMapDisplay();     // 最初のマップ表示を更新
 
         messageText.text = "Anata no bouken ga hajimatta!!";    // メッセージを表示
@@ -47,6 +51,23 @@ public class GameManager : MonoBehaviour
         {
             gridData[y] = baseMapData[y].ToCharArray();
         }
+    }
+
+    // NPCの初期化
+    void InitNPCs()
+    {
+        npcList = new System.Collections.Generic.List<NPC>();
+
+        // エミ (E, (3,3)) の追加
+        Vector2Int emiPos = new Vector2Int(3, 3);
+        
+        // 壁チェック（安全のためbaseMapDataで確認）
+        if (baseMapData[emiPos.y][emiPos.x] == '#')
+        {
+            Debug.LogError($"NPC 'Emi' cannot be placed at {emiPos} because it is a wall!");
+        }
+
+        npcList.Add(new NPC("Emi", 'E', emiPos, "Watashi ha Emi dayo!"));
     }
 
     // マップ表示を更新する関数
@@ -80,8 +101,11 @@ public class GameManager : MonoBehaviour
     // キャラクターをレイヤー順に配置
     void PlaceCharacters()
     {
-        // 1. NPCの配置（将来実装）
-        // foreach (var npc in npcList) gridData[npc.y][npc.x] = npc.symbol;
+        // 1. NPCの配置
+        foreach (var npc in npcList)
+        {
+            gridData[npc.pos.y][npc.pos.x] = npc.symbol;
+        }
 
         // 2. エネミーの配置（将来実装）
         // foreach (var enemy in enemyList) gridData[enemy.y][enemy.x] = enemy.symbol;
@@ -125,18 +149,26 @@ public class GameManager : MonoBehaviour
         if (direction == "Left") nextPos.x -= 1;
         if (direction == "Right") nextPos.x += 1;
 
-        // 💡 ここで「壁（#）じゃないか」のチェックを入れると完璧！
-        // baseMapData（動かない地形）で判定するのが安全
-        if (baseMapData[nextPos.y][nextPos.x] != '#')
-        {
-            playerPosition = nextPos;
-            UpdateMapDisplay(); // 画面を更新！
-
-            messageText.text = "Anata ha aruita."; // 壁に当たったメッセージ
-        }
-        else
+        // 1. 壁チェック
+        if (baseMapData[nextPos.y][nextPos.x] == '#')
         {
             messageText.text = "Kabe ni butsukatta!"; // 壁に当たったメッセージ
+            return;
         }
+
+        // 2. NPCチェック
+        foreach (var npc in npcList)
+        {
+            if (npc.pos == nextPos)
+            {
+                messageText.text = npc.message; // NPCのメッセージを表示
+                return; // 移動せずに終了（衝突）
+            }
+        }
+
+        // 3. 移動実行
+        playerPosition = nextPos;
+        UpdateMapDisplay(); // 画面を更新！
+        messageText.text = "Anata ha aruita.";
     }
 }
