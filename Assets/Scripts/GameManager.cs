@@ -29,15 +29,22 @@ public class GameManager : MonoBehaviour
     // インスペクタでアタッチしたTMPを参照
     public TMP_Text mapText;
     public TMP_Text messageText;
+    public TMP_Text hpText; // HP表示用
+
+    // プレイヤーのパラメータ
+    private int playerHP;
+    private const int playerMaxHP = 10;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         playerPosition = new Vector2Int(1, 1); // プレイヤーの初期位置を設定
+        playerHP = playerMaxHP; // HP初期化
         InitGrid();             // グリッドの初期化
         InitNPCs();             // NPCの初期化
         InitEnemies();          // エネミーの初期化
         UpdateMapDisplay();     // 最初のマップ表示を更新
+        UpdateHPDisplay();      // HP表示更新
 
         messageText.text = "Anata no bouken ga hajimatta!!";    // メッセージを表示
     }
@@ -81,15 +88,20 @@ public class GameManager : MonoBehaviour
         enemyList = new List<Enemy>();
 
         // スライム (S, (1,3)) の追加
-        Vector2Int slimePos = new Vector2Int(1, 3);
-
-        // 壁チェック
-        if (baseMapData[slimePos.y][slimePos.x] == '#')
+        Vector2Int slimePos1 = new Vector2Int(1, 3);
+        if (baseMapData[slimePos1.y][slimePos1.x] == '#')
         {
-            Debug.LogError($"Enemy 'Slime' cannot be placed at {slimePos} because it is a wall!");
+            Debug.LogError($"Enemy 'Slime' cannot be placed at {slimePos1} because it is a wall!");
         }
+        enemyList.Add(new Enemy("Slime", 'S', slimePos1));
 
-        enemyList.Add(new Enemy("Slime", 'S', slimePos));
+        // 2体目のスライム (S, (8,1)) の追加
+        Vector2Int slimePos2 = new Vector2Int(8, 1);
+        if (baseMapData[slimePos2.y][slimePos2.x] == '#')
+        {
+            Debug.LogError($"Enemy 'Slime' cannot be placed at {slimePos2} because it is a wall!");
+        }
+        enemyList.Add(new Enemy("Slime", 'S', slimePos2));
     }
 
     // マップ表示を更新する関数
@@ -189,7 +201,24 @@ public class GameManager : MonoBehaviour
         {
             if (npc.pos == nextPos)
             {
-                messageText.text = npc.message; // NPCのメッセージを表示
+                // エミの場合はHP回復
+                if (npc.name == "Emi")
+                {
+                    if (playerHP < playerMaxHP)
+                    {
+                        playerHP = playerMaxHP;
+                        UpdateHPDisplay();
+                        messageText.text = "HP wo kaihuku shitayo!";
+                    }
+                    else
+                    {
+                        messageText.text = "Watashi ha Emi dayo!";
+                    }
+                }
+                else
+                {
+                    messageText.text = npc.message; // その他のNPC
+                }
                 return; // 移動せずに終了（衝突）
             }
         }
@@ -201,12 +230,15 @@ public class GameManager : MonoBehaviour
             {
                 // エネミーを倒す
                 enemy.IsDead = true;
+                playerHP = Mathf.Max(0, playerHP - 1); // HP減少（0未満にならないように）
+                UpdateHPDisplay();
                 messageText.text = $"{enemy.Name} wo taoshita!";
                 
                 // プレイヤーは移動する（踏み込む）
                 playerPosition = nextPos;
                 UpdateMapDisplay();
                 CheckEnemyAdjacency(); // 移動後の隣接チェック
+                CheckEnemyRespawn();   // リスポーンチェック
                 return; 
             }
         }
@@ -217,6 +249,32 @@ public class GameManager : MonoBehaviour
         messageText.text = "Anata ha aruita.";
         
         CheckEnemyAdjacency(); // 移動後の隣接チェック
+        CheckEnemyRespawn();   // リスポーンチェック
+    }
+
+    // エネミーのリスポーンチェック
+    void CheckEnemyRespawn()
+    {
+        foreach (var enemy in enemyList)
+        {
+            if (enemy.IsDead)
+            {
+                float distance = Vector2Int.Distance(playerPosition, enemy.Pos);
+                if (distance >= 5.0f)
+                {
+                    enemy.IsDead = false; // 復活
+                }
+            }
+        }
+    }
+
+    // HP表示の更新
+    void UpdateHPDisplay()
+    {
+        if (hpText != null)
+        {
+            hpText.text = $"HP: {playerHP} / {playerMaxHP}";
+        }
     }
     // 周囲にエネミーがいるかチェックしてメッセージを表示
     void CheckEnemyAdjacency()
