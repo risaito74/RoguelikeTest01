@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI; // Button操作用
 using System.Collections.Generic;
 using TMPro;        // TextMeshProを使用するための名前空間
 
@@ -31,13 +32,21 @@ public class GameManager : MonoBehaviour
     public TMP_Text messageText;
     public TMP_Text hpText; // HP表示用
 
+    // ボタンUIの参照
+    public Button upButton;
+    public Button downButton;
+    public Button leftButton;
+    public Button rightButton;
+
     // プレイヤーのパラメータ
     private int playerHP;
     private const int playerMaxHP = 10;
+    private bool isPlayerDead = false; // 死亡フラグ
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        isPlayerDead = false; // フラグ初期化
         playerPosition = new Vector2Int(1, 1); // プレイヤーの初期位置を設定
         playerHP = playerMaxHP; // HP初期化
         InitGrid();             // グリッドの初期化
@@ -181,6 +190,8 @@ public class GameManager : MonoBehaviour
     // 押されたボタンによって座標を更新して壁チェックして画面を更新
     public void OnMoveButtonClicked(string direction)
     {
+        if (isPlayerDead) return; // 死亡時は操作無効
+
         Vector2Int nextPos = playerPosition;
 
         // 方向によって座標を計算
@@ -239,6 +250,12 @@ public class GameManager : MonoBehaviour
                 UpdateMapDisplay();
                 CheckEnemyAdjacency(); // 移動後の隣接チェック
                 CheckEnemyRespawn();   // リスポーンチェック
+                
+                // 死亡チェック
+                if (playerHP <= 0)
+                {
+                    PlayerDeath();
+                }
                 return; 
             }
         }
@@ -250,6 +267,21 @@ public class GameManager : MonoBehaviour
         
         CheckEnemyAdjacency(); // 移動後の隣接チェック
         CheckEnemyRespawn();   // リスポーンチェック
+    }
+
+    // プレイヤー死亡処理
+    void PlayerDeath()
+    {
+        isPlayerDead = true;
+        
+        // GameOverメッセージ表示（赤色）
+        messageText.text = "<color=red>GameOver...</color>";
+
+        // ボタン操作を無効化（グレーアウト）
+        if (upButton != null) upButton.interactable = false;
+        if (downButton != null) downButton.interactable = false;
+        if (leftButton != null) leftButton.interactable = false;
+        if (rightButton != null) rightButton.interactable = false;
     }
 
     // エネミーのリスポーンチェック
