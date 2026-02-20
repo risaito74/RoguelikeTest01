@@ -425,6 +425,7 @@ MonoBehaviour:
   downButton: {fileID: 166923124}
   leftButton: {fileID: 526863629}
   rightButton: {fileID: 1716890417}
+  restartButton: {fileID: 820151098}
 --- !u!4 &190254993
 Transform:
   m_ObjectHideFlags: 0
@@ -949,7 +950,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &820151097
 RectTransform:
   m_ObjectHideFlags: 0

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI; // Button操作用
+using UnityEngine.SceneManagement; // シーン遷移用
 using System.Collections.Generic;
 using TMPro;        // TextMeshProを使用するための名前空間
 
@@ -38,6 +39,8 @@ public class GameManager : MonoBehaviour
     public Button leftButton;
     public Button rightButton;
 
+    public Button restartButton; // リスタートボタン
+
     // プレイヤーのパラメータ
     private int playerHP;
     private const int playerMaxHP = 10;
@@ -46,6 +49,13 @@ public class GameManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        // リスタートボタンの初期設定
+        if (restartButton != null)
+        {
+            restartButton.gameObject.SetActive(false); // 最初は非表示
+            restartButton.onClick.AddListener(OnRestartPostion);
+        }
+
         isPlayerDead = false; // フラグ初期化
         playerPosition = new Vector2Int(1, 1); // プレイヤーの初期位置を設定
         playerHP = playerMaxHP; // HP初期化
@@ -55,6 +65,11 @@ public class GameManager : MonoBehaviour
         UpdateMapDisplay();     // 最初のマップ表示を更新
         UpdateHPDisplay();      // HP表示更新
 
+        if (hpText != null)
+        {
+            hpText.color = Color.white; // 色をリセット（白）
+        }
+        
         messageText.text = "Anata no bouken ga hajimatta!!";    // メッセージを表示
     }
 
@@ -277,11 +292,30 @@ public class GameManager : MonoBehaviour
         // GameOverメッセージ表示（赤色）
         messageText.text = "<color=red>GameOver...</color>";
 
+        // HPテキストも赤色にする
+        if (hpText != null)
+        {
+            hpText.color = Color.red;
+        }
+
         // ボタン操作を無効化（グレーアウト）
         if (upButton != null) upButton.interactable = false;
         if (downButton != null) downButton.interactable = false;
         if (leftButton != null) leftButton.interactable = false;
         if (rightButton != null) rightButton.interactable = false;
+
+        // リスタートボタンを表示
+        if (restartButton != null)
+        {
+            restartButton.gameObject.SetActive(true);
+        }
+    }
+
+    // リスタートボタンが押された時の処理
+    public void OnRestartPostion()
+    {
+        // 現在のシーンを再読み込み
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     // エネミーのリスポーンチェック
