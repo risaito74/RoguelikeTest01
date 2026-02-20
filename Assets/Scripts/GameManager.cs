@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 using TMPro;        // TextMeshProを使用するための名前空間
 
 public class GameManager : MonoBehaviour
@@ -7,18 +8,21 @@ public class GameManager : MonoBehaviour
     
     // 静的なマップデータ（変更不可の設計図）
     private static readonly string[] baseMapData = {
-        "#####  ###",
-        "#...####.#",
-        "#........#",
-        "#...######",
-        "#####     "
+        "#####  ###   ",
+        "#...####.####",
+        "#...........#",
+        "#...#########",
+        "#####        "
     };
 
     // 動的なグリッドデータ（実際にキャラが乗る盤面）
     private char[][] gridData;
 
     // NPCリストを追加
-    private System.Collections.Generic.List<NPC> npcList;
+    private List<NPC> npcList;
+
+    // エネミーリストを追加
+    private List<Enemy> enemyList;
 
     private Vector2Int playerPosition;
 
@@ -32,6 +36,7 @@ public class GameManager : MonoBehaviour
         playerPosition = new Vector2Int(1, 1); // プレイヤーの初期位置を設定
         InitGrid();             // グリッドの初期化
         InitNPCs();             // NPCの初期化
+        InitEnemies();          // エネミーの初期化
         UpdateMapDisplay();     // 最初のマップ表示を更新
 
         messageText.text = "Anata no bouken ga hajimatta!!";    // メッセージを表示
@@ -56,7 +61,7 @@ public class GameManager : MonoBehaviour
     // NPCの初期化
     void InitNPCs()
     {
-        npcList = new System.Collections.Generic.List<NPC>();
+        npcList = new List<NPC>();
 
         // エミ (E, (3,3)) の追加
         Vector2Int emiPos = new Vector2Int(3, 3);
@@ -68,6 +73,23 @@ public class GameManager : MonoBehaviour
         }
 
         npcList.Add(new NPC("Emi", 'E', emiPos, "Watashi ha Emi dayo!"));
+    }
+
+    // エネミーの初期化
+    void InitEnemies()
+    {
+        enemyList = new List<Enemy>();
+
+        // スライム (S, (1,3)) の追加
+        Vector2Int slimePos = new Vector2Int(1, 3);
+
+        // 壁チェック
+        if (baseMapData[slimePos.y][slimePos.x] == '#')
+        {
+            Debug.LogError($"Enemy 'Slime' cannot be placed at {slimePos} because it is a wall!");
+        }
+
+        enemyList.Add(new Enemy("Slime", 'S', slimePos));
     }
 
     // マップ表示を更新する関数
@@ -107,8 +129,14 @@ public class GameManager : MonoBehaviour
             gridData[npc.pos.y][npc.pos.x] = npc.symbol;
         }
 
-        // 2. エネミーの配置（将来実装）
-        // foreach (var enemy in enemyList) gridData[enemy.y][enemy.x] = enemy.symbol;
+        // 2. エネミーの配置
+        foreach (var enemy in enemyList)
+        {
+            if (!enemy.IsDead)
+            {
+                gridData[enemy.Pos.y][enemy.Pos.x] = enemy.Symbol;
+            }
+        }
 
         // 3. プレイヤーの配置（最前面）
         gridData[playerPosition.y][playerPosition.x] = '@';
@@ -166,9 +194,53 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // 3. 移動実行
+        // 3. エネミーチェック（攻撃・撃破）
+        foreach (var enemy in enemyList)
+        {
+            if (!enemy.IsDead && enemy.Pos == nextPos)
+            {
+                // エネミーを倒す
+                enemy.IsDead = true;
+                messageText.text = $"{enemy.Name} wo taoshita!";
+                
+                // プレイヤーは移動する（踏み込む）
+                playerPosition = nextPos;
+                UpdateMapDisplay();
+                CheckEnemyAdjacency(); // 移動後の隣接チェック
+                return; 
+            }
+        }
+
+        // 4. 移動実行
         playerPosition = nextPos;
         UpdateMapDisplay(); // 画面を更新！
         messageText.text = "Anata ha aruita.";
+        
+        CheckEnemyAdjacency(); // 移動後の隣接チェック
+    }
+    // 周囲にエネミーがいるかチェックしてメッセージを表示
+    void CheckEnemyAdjacency()
+    {
+        // 上下左右のオフセット
+        Vector2Int[] directions = {
+            new Vector2Int(0, 1),  // Up
+            new Vector2Int(0, -1), // Down
+            new Vector2Int(-1, 0), // Left
+            new Vector2Int(1, 0)   // Right
+        };
+
+        foreach (var enemy in enemyList)
+        {
+            if (enemy.IsDead) continue;
+
+            foreach (var dir in directions)
+            {
+                if (playerPosition + dir == enemy.Pos)
+                {
+                    messageText.text = $"{enemy.Name} ga iru!";
+                    return; // 1体見つけたら優先して表示終了
+                }
+            }
+        }
     }
 }
